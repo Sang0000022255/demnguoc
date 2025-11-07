@@ -3,64 +3,186 @@
 <head>
   <meta charset="UTF-8">
   <title>Đếm ngược Ngày lễ Việt Nam</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    /* ---- BIẾN MÀU & CÀI ĐẶT CHUNG ---- */
+    :root {
+      --bg-dark: #0f172a;
+      --card-dark: #1e293b;
+      --text-dark: #f8fafc;
+      --text-muted-dark: #94a3b8;
+      --progress-bg-dark: #334155;
+      --green: #22c55e;
+      
+      --bg-light: #f4f4f5;
+      --card-light: #ffffff;
+      --text-light: #111827;
+      --text-muted-light: #6b7280;
+      --progress-bg-light: #e5e7eb;
+    }
     body {
       font-family: Arial, sans-serif;
-      background: #0f172a;
-      color: #f8fafc;
+      background: var(--bg-dark);
+      color: var(--text-dark);
       margin: 0; padding: 20px;
+      transition: background 0.3s, color 0.3s;
     }
-    h1 { text-align: center; margin-bottom: 20px; }
-    header {
+    
+    /* ---- BỐ CỤC CHÍNH ---- */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    h1 { margin: 0; font-size: 24px; }
+    .top-actions { display: flex; gap: 10px; }
+    
+    .control-bar {
       display: flex; flex-wrap: wrap; gap: 10px;
-      justify-content: center; margin-bottom: 20px;
+      justify-content: center;
+      margin-bottom: 25px;
+      background: var(--card-dark);
+      padding: 12px;
+      border-radius: 10px;
     }
-    .ctrl { padding: 6px 10px; border-radius: 6px; border: none; }
+    .ctrl {
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--progress-bg-dark);
+      background: var(--bg-dark);
+      color: var(--text-dark);
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .ctrl:hover {
+      border-color: var(--text-muted-dark);
+    }
     input[type="text"], input[type="number"], input[type="date"] {
       padding: 5px; border-radius: 6px; border: 1px solid #ccc;
+      background: #f0f0f0;
+      color: #333;
     }
+    label.ctrl {
+      border: none;
+      background: none;
+      padding: 0;
+      display: flex; align-items: center; gap: 5px;
+    }
+
+    /* ---- DANH SÁCH THẺ ---- */
     #eventList {
-      display: grid; grid-template-columns: repeat(auto-fit,minmax(280px,1fr));
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 15px;
     }
     .card {
-      background: #1e293b;
+      background: var(--card-dark);
       padding: 14px;
       border-radius: 10px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.3);
       transition: transform 0.2s;
+      position: relative; /* Dùng cho nút xóa */
     }
-    .card:hover { transform: scale(1.02); }
-    .name { font-size: 18px; font-weight: bold; }
-    .date { font-size: 14px; color: #94a3b8; margin-top: 4px; }
-    .countdown { font-size: 16px; margin-top: 8px; }
+    .card:hover { transform: translateY(-3px); }
+    .name { font-size: 18px; font-weight: bold; padding-right: 25px; } /* Chừa chỗ cho nút xóa */
+    .date { font-size: 14px; color: var(--text-muted-dark); margin-top: 4px; }
+    .countdown { font-size: 16px; margin-top: 10px; }
+    .countdown-days {
+      font-size: 26px;
+      font-weight: bold;
+      color: #34d399; /* Màu xanh lá sáng */
+      margin: 0 5px;
+    }
     .progress {
-      margin-top: 10px; background: #334155;
+      margin-top: 10px; background: var(--progress-bg-dark);
       border-radius: 6px; height: 10px; overflow: hidden;
     }
     .progress-bar {
-      height: 100%; background: #22c55e;
+      height: 100%; background: var(--green);
       width: 0%; transition: width 1s ease-in-out;
     }
-    .passed .progress-bar { background: #9ca3af; }
-    /* Light Theme */
-    body.light { background: #f9fafb; color: #111; }
-    body.light .card { background: #fff; color: #111; }
-    body.light .date { color: #555; }
-    body.light .progress { background: #e2e8f0; }
-    body.light .passed .progress-bar { background: #cbd5e1; }
-    /* Form */
-    #eventForm {
-      display:none; background:#1e293b;
-      padding:14px; border-radius:10px; margin-bottom:15px;
+    
+    /* Trạng thái đã qua */
+    .passed .countdown-days { color: var(--text-muted-dark); }
+    .passed .progress-bar { background: var(--text-muted-dark); }
+
+    /* ---- NÚT XÓA SỰ KIỆN TÙY CHỈNH ---- */
+    .delete-btn {
+      position: absolute;
+      top: 10px; right: 10px;
+      background: #ef4444;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 24px; height: 24px;
+      font-size: 12px;
+      line-height: 24px;
+      text-align: center;
+      cursor: pointer;
+      opacity: 0.5;
+      transition: opacity 0.2s;
     }
-    body.light #eventForm { background:#e2e8f0; }
+    .card:hover .delete-btn { opacity: 1; }
+    .delete-btn:hover { background: #dc2626; }
+
+    /* ---- MODAL (Cửa sổ bật lên) ---- */
+    #modal-backdrop {
+      display: none; /* Ẩn mặc định */
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      z-index: 100;
+      justify-content: center;
+      align-items: center;
+      animation: fadeIn 0.3s;
+    }
+    .modal-content {
+      background: var(--card-dark);
+      padding: 20px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 400px;
+    }
+    .modal-content h3 { margin-top: 0; }
+    .modal-content input { width: 95%; }
+    .modal-actions {
+      margin-top: 20px;
+      display: flex; gap: 10px; justify-content: flex-end;
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* ---- CHỦ ĐỀ SÁNG (Light Theme) ---- */
+    body.light { background: var(--bg-light); color: var(--text-light); }
+    body.light .card { background: var(--card-light); }
+    body.light .date { color: var(--text-muted-light); }
+    body.light .progress { background: var(--progress-bg-light); }
+    body.light .control-bar { background: var(--card-light); }
+    body.light .ctrl {
+      background: var(--bg-light);
+      color: var(--text-light);
+      border-color: var(--progress-bg-light);
+    }
+    body.light label.ctrl { border: none; background: none; }
+    body.light .ctrl:hover { border-color: #aaa; }
+    body.light .passed .countdown-days { color: var(--text-muted-light); }
+    body.light .passed .progress-bar { background: var(--text-muted-light); }
+    body.light .countdown-days { color: #10b981; }
+    body.light .modal-content { background: var(--card-light); }
   </style>
 </head>
 <body>
-  <h1>📅 Đếm ngược Ngày lễ Việt Nam</h1>
 
-  <header>
+  <div class="top-bar">
+    <h1>📅 Đếm ngược Ngày lễ</h1>
+    <div class="top-actions">
+      <button id="themeToggle" class="ctrl">🌙</button>
+      <button id="addEventBtn" class="ctrl">➕ Thêm</button>
+    </div>
+  </div>
+
+  <div class="control-bar">
     <label class="ctrl">Năm:
       <input id="yearInput" type="number" min="2024" max="2030" value="2025">
     </label>
@@ -70,21 +192,24 @@
     <label class="ctrl">
       <input id="togglePast" type="checkbox" checked> Hiện sự kiện đã qua
     </label>
-    <button id="themeToggle" class="ctrl">🌙 Đổi Theme</button>
-    <button id="addEventBtn" class="ctrl">➕ Thêm sự kiện</button>
-  </header>
-
-  <!-- Form thêm sự kiện -->
-  <div id="eventForm">
-    <h3>Thêm sự kiện cá nhân</h3>
-    <label>Tên: <input id="customName" type="text"></label><br><br>
-    <label>Ngày: <input id="customDate" type="date"></label><br><br>
-    <button id="saveEvent">Lưu</button>
   </div>
 
   <div id="eventList"></div>
 
-  <!-- amlich.js -->
+  <div id="modal-backdrop">
+    <div class="modal-content">
+      <h3>Thêm sự kiện cá nhân</h3>
+      <label>Tên sự kiện:</label><br>
+      <input id="customName" type="text" style="margin-top: 5px;"><br><br>
+      <label>Ngày diễn ra:</label><br>
+      <input id="customDate" type="date" style="margin-top: 5px;"><br>
+      <div class="modal-actions">
+        <button id="cancelEvent" class="ctrl">Hủy</button>
+        <button id="saveEvent" class="ctrl">Lưu</button>
+      </div>
+    </div>
+  </div>
+
   <script>
   function INT(d){return Math.floor(d);}
   function jdFromDate(dd, mm, yy) {
@@ -163,61 +288,88 @@
 
   <script>
     const HOLIDAYS = [
-  { name:"Tết Dương lịch", emoji:"🎉", month:1, day:1 },
-  { name:"Ngày thành lập Đảng Cộng sản Việt Nam", emoji:"🚩", month:2, day:3 },
-  { name:"Ngày Thầy thuốc Việt Nam", emoji:"⚕️", month:2, day:27 },
-  { name:"Lễ Tình nhân (Valentine)", emoji:"❤️", month:2, day:14 },
-  { name:"Ngày Quốc tế Phụ nữ", emoji:"🌸", month:3, day:8 },
-  { name:"Ngày thành lập Đoàn Thanh niên Cộng sản Hồ Chí Minh", emoji:"🕊️", month:3, day:26 },
-  { name:"Ngày Quốc tế Hạnh phúc", emoji:"😊", month:3, day:20 },
-  { name:"Giỗ Tổ Hùng Vương", emoji:"👑", month:4, day:18 }, // (Âm lịch 10/3 nhưng VN quy định nghỉ, ta có thể thêm riêng bằng amlich)
-  { name:"Ngày Trái đất", emoji:"🌍", month:4, day:22 },
-  { name:"Ngày Giải phóng miền Nam", emoji:"🇻🇳", month:4, day:30 },
-  { name:"Ngày Quốc tế Lao động", emoji:"⚒️", month:5, day:1 },
-  { name:"Ngày sinh Chủ tịch Hồ Chí Minh", emoji:"🌟", month:5, day:19 },
-  { name:"Ngày Quốc tế Thiếu nhi", emoji:"👦👧", month:6, day:1 },
-  { name:"Ngày Thương binh Liệt sĩ", emoji:"🕯️", month:7, day:27 },
-  { name:"Ngày Cách mạng tháng Tám thành công", emoji:"🔥", month:8, day:19 },
-  { name:"Quốc khánh", emoji:"🎆", month:9, day:2 },
-  { name:"Ngày thành lập Đài Truyền hình Việt Nam", emoji:"📺", month:9, day:7 },
-  { name:"Ngày Doanh nhân Việt Nam", emoji:"💼", month:10, day:13 },
-  { name:"Ngày thành lập Hội Nông dân Việt Nam", emoji:"🌾", month:10, day:14 },
-  { name:"Ngày Phụ nữ Việt Nam", emoji:"💐", month:10, day:20 },
-  { name:"Ngày Nhà giáo Việt Nam", emoji:"📚", month:11, day:20 },
-  { name:"Ngày thành lập Quân đội Nhân dân Việt Nam", emoji:"🪖", month:12, day:22 },
-  { name:"Giáng sinh", emoji:"🎄", month:12, day:25 }
+      { name:"Tết Dương lịch", emoji:"🎉", month:1, day:1 },
+      { name:"Ngày thành lập Đảng", emoji:"🚩", month:2, day:3 },
+      { name:"Lễ Tình nhân (Valentine)", emoji:"❤️", month:2, day:14 },
+      { name:"Ngày Thầy thuốc Việt Nam", emoji:"⚕️", month:2, day:27 },
+      { name:"Ngày Quốc tế Phụ nữ", emoji:"🌸", month:3, day:8 },
+      { name:"Giỗ Tổ Hùng Vương", emoji:"👑", month:4, day:18 }, // Cập nhật năm 2025 (Âm lịch 10/3)
+      { name:"Ngày Giải phóng miền Nam", emoji:"🇻🇳", month:4, day:30 },
+      { name:"Ngày Quốc tế Lao động", emoji:"⚒️", month:5, day:1 },
+      { name:"Ngày sinh Chủ tịch Hồ Chí Minh", emoji:"🌟", month:5, day:19 },
+      { name:"Ngày Quốc tế Thiếu nhi", emoji:"👦👧", month:6, day:1 },
+      { name:"Ngày Thương binh Liệt sĩ", emoji:"🕯️", month:7, day:27 },
+      { name:"Cách mạng tháng Tám", emoji:"🔥", month:8, day:19 },
+      { name:"Quốc khánh", emoji:"🎆", month:9, day:2 },
+      { name:"Ngày Phụ nữ Việt Nam", emoji:"💐", month:10, day:20 },
+      { name:"Ngày Nhà giáo Việt Nam", emoji:"📚", month:11, day:20 },
+      { name:"Ngày thành lập QĐND", emoji:"🪖", month:12, day:22 },
+      { name:"Giáng sinh", emoji:"🎄", month:12, day:25 }
     ];
+    // Sửa Trung Thu về đúng ngày 15/8 Âm lịch
     const LUNAR_HOLIDAYS = [
-      { name:"Tết Nguyên Đán", emoji:"🎉", month:1, day:1 },
+      { name:"Tết Nguyên Đán", emoji:"🧧", month:1, day:1 },
       { name:"Rằm tháng Giêng", emoji:"🌕", month:1, day:15 },
       { name:"Tết Đoan Ngọ", emoji:"🍑", month:5, day:5 },
       { name:"Vu Lan Báo Hiếu", emoji:"🙏", month:7, day:15 },
-      { name:"Trung Thu", emoji:"🥮", month:10, day:6 }
+      { name:"Tết Trung Thu", emoji:"🥮", month:8, day:15 }
     ];
 
+    // ---- LOGIC GIAO DIỆN MỚI ----
     const themeToggle=document.getElementById("themeToggle");
-    if(localStorage.getItem("theme")==="light") document.body.classList.add("light");
+    const addEventBtn=document.getElementById("addEventBtn");
+    const modalBackdrop=document.getElementById("modal-backdrop");
+    const saveEventBtn=document.getElementById("saveEvent");
+    const cancelEventBtn=document.getElementById("cancelEvent");
+
+    // 1. Theme
+    if(localStorage.getItem("theme")==="light") {
+        document.body.classList.add("light");
+        themeToggle.textContent = "☀️";
+    } else {
+        themeToggle.textContent = "🌙";
+    }
     themeToggle.addEventListener("click",()=>{
       document.body.classList.toggle("light");
-      localStorage.setItem("theme",document.body.classList.contains("light")?"light":"dark");
+      const isLight = document.body.classList.contains("light");
+      localStorage.setItem("theme", isLight ? "light" : "dark");
+      themeToggle.textContent = isLight ? "☀️" : "🌙";
     });
 
-    const addEventBtn=document.getElementById("addEventBtn");
-    const eventForm=document.getElementById("eventForm");
-    const saveEvent=document.getElementById("saveEvent");
-    addEventBtn.addEventListener("click",()=>{eventForm.style.display=eventForm.style.display==="none"?"block":"none"});
-    saveEvent.addEventListener("click",()=>{
+    // 2. Modal
+    addEventBtn.addEventListener("click", () => { modalBackdrop.style.display = "flex"; });
+    cancelEventBtn.addEventListener("click", () => { modalBackdrop.style.display = "none"; });
+    modalBackdrop.addEventListener("click", (e) => {
+      if (e.target === modalBackdrop) modalBackdrop.style.display = "none";
+    });
+    
+    // 3. Lưu sự kiện (Đã thêm ID để xóa)
+    saveEventBtn.addEventListener("click",()=>{
       const name=document.getElementById("customName").value;
       const date=document.getElementById("customDate").value;
       if(name && date){
         const events=JSON.parse(localStorage.getItem("customEvents")||"[]");
-        events.push({name,emoji:"⭐",absolute:date});
+        // Thêm ID để có thể xóa
+        events.push({name: name, emoji:"⭐", absolute: date, id: Date.now()}); 
         localStorage.setItem("customEvents",JSON.stringify(events));
         render();
-        eventForm.style.display="none";
+        modalBackdrop.style.display="none";
+        document.getElementById("customName").value = "";
+        document.getElementById("customDate").value = "";
       }
     });
 
+    // 4. HÀM MỚI: Xóa sự kiện
+    function deleteEvent(id) {
+        if (!confirm("Bạn có chắc muốn xóa sự kiện này?")) return;
+        let events = JSON.parse(localStorage.getItem("customEvents") || "[]");
+        events = events.filter(e => e.id !== id);
+        localStorage.setItem("customEvents", JSON.stringify(events));
+        render();
+    }
+    
+    // ---- LOGIC HIỂN THỊ (Render) ----
+    
     function lunarToSolar(year){
       return LUNAR_HOLIDAYS.map(e=>{
         const d = convertLunar2Solar(e.day, e.month, year, 0, 7); 
@@ -225,6 +377,7 @@
         return { ...e, absolute: dateStr };
       });
     }
+    
     function getAllEvents(year){
       const customs=JSON.parse(localStorage.getItem("customEvents")||"[]");
       const holidays=HOLIDAYS.map(e=>({ 
@@ -242,44 +395,77 @@
       const search=document.getElementById("searchInput").value.toLowerCase();
       const showPast=document.getElementById("togglePast").checked;
       const now=new Date();
+      // Đặt giờ về 0 để so sánh ngày chính xác
+      now.setHours(0, 0, 0, 0);
 
       let events=getAllEvents(year).filter(e=>e.name.toLowerCase().includes(search));
+      
       events=events.map(e=>{
         const d=new Date(e.absolute);
-        let diff=Math.floor((d-now)/(1000*60*60*24));
+        // Cần thêm 1 múi giờ vì new Date('YYYY-MM-DD') sẽ tạo ra 00:00 UTC, 
+        // nhưng ở VN (+7) nó sẽ bị lùi về 1 ngày trước
+        d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
+        
+        let diff=Math.ceil((d-now)/(1000*60*60*24));
         const startYear=new Date(year,0,1);
-        const totalDays=Math.floor((d-startYear)/(1000*60*60*24));
-        const passedDays=Math.floor((now-startYear)/(1000*60*60*24));
-        let percent = Math.min(100, Math.max(0, (passedDays/totalDays)*100));
-        if(diff<0) percent=100;
+        
+        // Tính tổng số ngày từ đầu năm đến ngày sự kiện
+        // (chỉ có ý nghĩa nếu sự kiện diễn ra trong năm)
+        const totalDays=Math.ceil((d-startYear)/(1000*60*60*24));
+        const passedDays=Math.ceil((now-startYear)/(1000*60*60*24));
+        
+        let percent = 100; // Mặc định là 100% nếu đã qua
+        if (diff > 0 && totalDays > 0) {
+            percent = Math.min(100, Math.max(0, (passedDays / totalDays) * 100));
+        } else if (diff < 0) {
+            percent = 100;
+        } else if (diff === 0) {
+            percent = 100;
+        }
+
         return { ...e, date:d, diff, percent };
       });
+      
       events=events.filter(e=> showPast || e.diff>=0 );
       events.sort((a,b)=>a.date-b.date);
 
       events.forEach(ev=>{
         const card=document.createElement("div");
         card.className="card"+(ev.diff<0?" passed":"");
+        
+        let countdownText = "";
+        if (ev.diff === 0) {
+            countdownText = `🎉 <span class="countdown-days">HÔM NAY!</span> 🎉`;
+        } else if (ev.diff > 0) {
+            countdownText = `⏳ Còn <span class="countdown-days">${ev.diff}</span> ngày`;
+        } else {
+            countdownText = `✅ Đã qua <span class="countdown-days">${-ev.diff}</span> ngày`;
+        }
+        
+        // Chỉ thêm nút xóa nếu sự kiện có ID (tức là sự kiện tùy chỉnh)
+        const deleteButton = ev.id 
+          ? `<button class="delete-btn" onclick="deleteEvent(${ev.id})">✖</button>` 
+          : "";
+
         card.innerHTML=`
           <div class="name">${ev.emoji} ${ev.name}</div>
           <div class="date">📅 ${ev.date.toLocaleDateString("vi-VN")}</div>
-          <div class="countdown">${ev.diff>=0?`⏳ Còn ${ev.diff} ngày`:`✅ Đã qua ${-ev.diff} ngày`}</div>
+          <div class="countdown">${countdownText}</div>
           <div class="progress"><div class="progress-bar" style="width:${ev.percent}%"></div></div>
+          ${deleteButton}
         `;
         list.appendChild(card);
       });
     }
 
+    // ---- CHẠY ỨNG DỤNG ----
     document.getElementById("yearInput").addEventListener("input",render);
     document.getElementById("searchInput").addEventListener("input",render);
     document.getElementById("togglePast").addEventListener("change",render);
-    setInterval(render,60*1000);
+    
+    // Cập nhật mỗi 5 phút thay vì 1 phút
+    setInterval(render, 5 * 60 * 1000); 
     render();
   </script>
 </body>
 </html>
-
-
-
-
-
